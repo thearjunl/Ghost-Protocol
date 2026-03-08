@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import ToastContainer from "@/components/Toast";
 
 export const metadata: Metadata = {
   title: "GhostProtocol — NHI Security Dashboard",
@@ -13,7 +14,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="dark">
-      <body className="antialiased">{children}</body>
+      <body className="antialiased">
+        {children}
+        <ToastContainer />
+      </body>
     </html>
   );
 }

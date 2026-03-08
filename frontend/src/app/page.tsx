@@ -7,6 +7,7 @@ import Sidebar from "@/components/Sidebar";
 import StatsBar from "@/components/StatsBar";
 import IdentityTable from "@/components/IdentityTable";
 import { fetchIdentities, triggerScan, type Identity } from "@/lib/api";
+import { toast } from "@/components/Toast";
 
 export default function DashboardPage() {
   const [identities, setIdentities] = useState<Identity[]>([]);
@@ -19,7 +20,7 @@ export default function DashboardPage() {
       const data = await fetchIdentities();
       setIdentities(data);
     } catch (err) {
-      console.error("Failed to load identities:", err);
+      toast("error", "Failed to load identities — is the backend running?");
     } finally {
       setLoading(false);
     }
@@ -33,9 +34,10 @@ export default function DashboardPage() {
     setScanning(true);
     try {
       await triggerScan();
+      toast("success", "AWS scan completed successfully");
       await loadData();
     } catch (err) {
-      console.error("Scan failed:", err);
+      toast("error", "AWS scan failed — check backend logs");
     } finally {
       setScanning(false);
     }

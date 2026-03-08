@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Eye, ShieldOff, Loader2 } from "lucide-react";
 import RiskBadge from "./RiskBadge";
 import PolicyModal from "./PolicyModal";
+import { toast } from "./Toast";
 import type { Identity, AnalysisResult } from "@/lib/api";
 import { analyzeIdentity, quarantineIdentity } from "@/lib/api";
 
@@ -51,7 +52,7 @@ export default function IdentityTable({ identities, onRefresh }: Props) {
       const result = await analyzeIdentity(identity.arn);
       setAnalysis(result);
     } catch (err) {
-      console.error("Analysis failed:", err);
+      toast("error", "AI analysis failed — is Ollama running?");
     } finally {
       setAnalysisLoading(false);
     }
@@ -63,9 +64,10 @@ export default function IdentityTable({ identities, onRefresh }: Props) {
       setQuarantining(arn);
       try {
         await quarantineIdentity(arn);
+        toast("success", "Identity quarantined successfully");
         onRefresh();
       } catch (err) {
-        console.error("Quarantine failed:", err);
+        toast("error", "Quarantine failed — check permissions");
       } finally {
         setQuarantining(null);
       }

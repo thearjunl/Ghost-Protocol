@@ -7,3 +7,4 @@ langchain==0.3.13
 langchain-community==0.3.13
 pydantic==2.10.3
 httpx==0.28.1
+pytest==8.3.4

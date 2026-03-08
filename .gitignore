@@ -170,6 +170,10 @@ node_modules/
 out/
 .env.local
 
+# ── IDE / Tools ───────────────────────────────────
+.zencoder/
+.zenflow/
+
 # ── OS ────────────────────────────────────────────
 .DS_Store
 Thumbs.db

@@ -8,6 +8,7 @@ Deny-All permissions boundary — a reversible, non-destructive kill switch.
 
 import json
 import logging
+import re
 import time
 from typing import Any
 
@@ -35,6 +36,17 @@ QUARANTINE_POLICY_DOC = json.dumps({
         "Resource": "*",
     }],
 })
+
+
+# Regex that matches valid IAM role ARNs
+_ROLE_ARN_RE = re.compile(
+    r"^arn:aws:iam::\d{12}:role/[\w+=,.@/-]+$"
+)
+
+
+def _validate_role_arn(arn: str) -> bool:
+    """Return True if *arn* is a well-formed IAM role ARN."""
+    return bool(_ROLE_ARN_RE.match(arn))
 
 
 def _get_iam_client():
@@ -144,8 +156,11 @@ def _query_used_actions(role_arn: str) -> list[str]:
     """
     athena = _get_athena_client()
 
-    # Parameterised via string formatting — the ARN is an internal value,
-    # not user-supplied, so injection risk is controlled.
+    # Validate ARN format before embedding in SQL
+    if not _validate_role_arn(role_arn):
+        logger.warning("Invalid role ARN format, skipping Athena query: %s", role_arn)
+        return []
+
     query = (
         f"SELECT DISTINCT eventsource || ':' || eventname AS action "
         f"FROM {ATHENA_DATABASE}.cloudtrail_logs "
@@ -299,7 +314,9 @@ def quarantine_identity(arn: str) -> dict[str, Any]:
     iam = _get_iam_client()
     policy_arn = _ensure_quarantine_policy()
 
-    # Extract role name from ARN (arn:aws:iam::ACCOUNT:role/ROLE_NAME)
+    # Validate and extract role name from ARN
+    if not _validate_role_arn(arn):
+        raise ValueError(f"Invalid IAM role ARN format: {arn}")
     role_name = arn.rsplit("/", 1)[-1]
 
     try:

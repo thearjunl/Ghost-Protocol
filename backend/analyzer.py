@@ -7,6 +7,7 @@ least-privilege replacement policy and a numeric risk score (1-100).
 
 import json
 import logging
+import re
 from typing import Any
 
 from langchain_community.llms import Ollama
@@ -15,6 +16,52 @@ from langchain.prompts import ChatPromptTemplate
 from config import OLLAMA_BASE_URL
 
 logger = logging.getLogger("ghostprotocol.analyzer")
+
+# Regex to extract JSON from markdown-fenced or free-text LLM output
+_JSON_FENCE_RE = re.compile(r"```(?:json)?\s*\n?(\{.*?\})\s*```", re.DOTALL)
+
+
+def _extract_json(raw: str) -> dict:
+    """Robustly extract JSON from an LLM response string.
+
+    Handles three common LLM output patterns:
+    1. Clean JSON string.
+    2. JSON wrapped in markdown code fences (```json ... ```).
+    3. JSON embedded in surrounding prose.
+
+    Raises ValueError if no valid JSON can be found.
+    """
+    # 1. Try direct parse
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        pass
+
+    # 2. Try markdown-fenced extraction
+    fence_match = _JSON_FENCE_RE.search(raw)
+    if fence_match:
+        try:
+            return json.loads(fence_match.group(1))
+        except json.JSONDecodeError:
+            pass
+
+    # 3. Greedy brace-matched extraction (find outermost { ... })
+    depth = 0
+    start = -1
+    for i, ch in enumerate(raw):
+        if ch == "{":
+            if depth == 0:
+                start = i
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0 and start != -1:
+                try:
+                    return json.loads(raw[start : i + 1])
+                except json.JSONDecodeError:
+                    start = -1  # reset and keep scanning
+
+    raise ValueError("Could not parse LLM response as JSON")
 
 SYSTEM_PROMPT = """\
 You are an IAM Policy Expert specialising in the Principle of Least Privilege.
@@ -100,18 +147,7 @@ def generate_least_privilege_policy(
         "used_actions": json.dumps(used_actions, indent=2),
     })
 
-    # Parse the LLM JSON response
-    try:
-        result = json.loads(raw_response)
-    except json.JSONDecodeError:
-        logger.error("LLM returned invalid JSON — attempting extraction")
-        # Try to find JSON block in the response
-        start = raw_response.find("{")
-        end = raw_response.rfind("}") + 1
-        if start != -1 and end > start:
-            result = json.loads(raw_response[start:end])
-        else:
-            raise ValueError("Could not parse LLM response as JSON")
+    result = _extract_json(raw_response)
 
     # Validate / clamp risk score
     score = int(result.get("risk_score", 50))
