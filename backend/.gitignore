@@ -1,0 +1,6 @@
+# GhostProtocol Backend
+__pycache__/
+*.pyc
+.env
+venv/
+.venv/
