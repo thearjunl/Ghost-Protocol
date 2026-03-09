@@ -5,25 +5,44 @@ analyse, and quarantine Non-Human Identities in AWS.
 """
 
 import logging
+import uuid
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request, Security, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import APIKeyHeader
 from pydantic import BaseModel
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+from starlette.responses import JSONResponse
+from pythonjsonlogger import jsonlogger
 
-from config import LOG_LEVEL
+from config import LOG_LEVEL, CORS_ORIGINS, API_KEY
 from database import get_all_identities, get_identity
 from scanner import get_nhi_profiles, quarantine_identity
 from analyzer import generate_least_privilege_policy
 
 # ---------------------------------------------------------------------------
-# Logging
+# Structured JSON Logging
 # ---------------------------------------------------------------------------
+_log_handler = logging.StreamHandler()
+_log_handler.setFormatter(
+    jsonlogger.JsonFormatter(
+        "%(asctime)s %(name)s %(levelname)s %(message)s",
+        rename_fields={"asctime": "timestamp", "levelname": "level"},
+    )
+)
 logging.basicConfig(
     level=getattr(logging, LOG_LEVEL, logging.INFO),
-    format="%(asctime)s | %(name)s | %(levelname)s | %(message)s",
+    handlers=[_log_handler],
 )
 logger = logging.getLogger("ghostprotocol.app")
+
+# ---------------------------------------------------------------------------
+# Rate Limiter
+# ---------------------------------------------------------------------------
+limiter = Limiter(key_func=get_remote_address, default_limits=["60/minute"])
 
 
 # ---------------------------------------------------------------------------
@@ -46,13 +65,46 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.state.limiter = limiter
+
+
+@app.exception_handler(RateLimitExceeded)
+async def _rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    return JSONResponse(status_code=429, content={"detail": "Rate limit exceeded. Try again later."})
+
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# ---------------------------------------------------------------------------
+# Request-ID Middleware
+# ---------------------------------------------------------------------------
+@app.middleware("http")
+async def add_request_id(request: Request, call_next):
+    request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
+    response = await call_next(request)
+    response.headers["X-Request-ID"] = request_id
+    return response
+
+
+# ---------------------------------------------------------------------------
+# API-Key Authentication (optional — only enforced when GHOSTPROTOCOL_API_KEY is set)
+# ---------------------------------------------------------------------------
+_api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
+
+
+async def verify_api_key(api_key: str | None = Security(_api_key_header)):
+    """Validate the API key if one is configured."""
+    if not API_KEY:  # auth disabled
+        return
+    if api_key != API_KEY:
+        raise HTTPException(status_code=401, detail="Invalid or missing API key")
 
 
 # ---------------------------------------------------------------------------
@@ -70,13 +122,15 @@ class AnalyzeRequest(BaseModel):
 # Endpoints
 # ---------------------------------------------------------------------------
 @app.get("/health")
-def health():
+@limiter.limit("120/minute")
+def health(request: Request):
     """Health-check endpoint."""
     return {"status": "ok"}
 
 
 @app.post("/scan")
-def scan_identities():
+@limiter.limit("10/minute")
+def scan_identities(request: Request, _: None = Depends(verify_api_key)):
     """Trigger an AWS scan and persist discovered NHI profiles to Supabase."""
     try:
         profiles = get_nhi_profiles()
@@ -87,7 +141,8 @@ def scan_identities():
 
 
 @app.get("/identities")
-def list_identities():
+@limiter.limit("60/minute")
+def list_identities(request: Request, _: None = Depends(verify_api_key)):
     """Return all audited identities from Supabase, ordered by risk."""
     try:
         return get_all_identities()
@@ -97,7 +152,8 @@ def list_identities():
 
 
 @app.get("/identities/{arn:path}")
-def get_single_identity(arn: str):
+@limiter.limit("60/minute")
+def get_single_identity(arn: str, request: Request, _: None = Depends(verify_api_key)):
     """Fetch a single identity by its ARN."""
     identity = get_identity(arn)
     if identity is None:
@@ -106,7 +162,8 @@ def get_single_identity(arn: str):
 
 
 @app.post("/analyze")
-def analyze_identity(req: AnalyzeRequest):
+@limiter.limit("10/minute")
+def analyze_identity(req: AnalyzeRequest, request: Request, _: None = Depends(verify_api_key)):
     """Run AI analysis on an identity to generate a least-privilege policy."""
     identity = get_identity(req.arn)
     if identity is None:
@@ -124,7 +181,8 @@ def analyze_identity(req: AnalyzeRequest):
 
 
 @app.post("/quarantine")
-def quarantine(req: QuarantineRequest):
+@limiter.limit("5/minute")
+def quarantine(req: QuarantineRequest, request: Request, _: None = Depends(verify_api_key)):
     """Quarantine an identity by attaching a Deny-All permissions boundary."""
     try:
         result = quarantine_identity(req.arn)

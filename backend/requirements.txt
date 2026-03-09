@@ -7,4 +7,6 @@ langchain==0.3.13
 langchain-community==0.3.13
 pydantic==2.10.3
 httpx==0.28.1
+slowapi==0.1.9
+python-json-logger==2.0.7
 pytest==8.3.4
