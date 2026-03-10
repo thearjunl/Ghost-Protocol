@@ -6,6 +6,7 @@ GhostProtocol discovers, analyses, and enforces least-privilege policies on mach
 
 ---
 
+
 ## Problem Solved
 
 Enterprises run thousands of IAM Roles that are consumed by services rather than humans. These **Non-Human Identities** are frequently over-provisioned — they carry broad wildcard permissions despite using only a handful of API actions. GhostProtocol:
