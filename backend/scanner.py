@@ -20,10 +20,17 @@ from database import upsert_identity, mark_quarantined
 
 logger = logging.getLogger("ghostprotocol.scanner")
 
-# Non-human trust principals we care about
+# Services commonly used as Non-Human Identities (NHIs)
 NHI_PRINCIPALS = {
     "ec2.amazonaws.com",
     "lambda.amazonaws.com",
+    "ecs-tasks.amazonaws.com",
+    "eks.amazonaws.com",
+    "events.amazonaws.com",
+    "apigateway.amazonaws.com",
+    "states.amazonaws.com",  # Step Functions
+    "sns.amazonaws.com",
+    "sqs.amazonaws.com",
 }
 
 QUARANTINE_POLICY_NAME = "GhostProtocol-Quarantine"
@@ -228,15 +235,27 @@ def get_nhi_profiles() -> list[dict[str, Any]]:
         name = role["RoleName"]
         trust = role.get("AssumeRolePolicyDocument", {})
 
-        # Determine principal type label
-        principals: list[str] = []
+        # Determine principal type label and collect all NHI principals
+        nhi_principals: set[str] = set()
         for stmt in trust.get("Statement", []):
-            svc = stmt.get("Principal", {}).get("Service", [])
-            if isinstance(svc, str):
-                svc = [svc]
-            principals.extend(svc)
+            if stmt.get("Effect") == "Allow":
+                principal_block = stmt.get("Principal", {})
+                services = principal_block.get("Service", [])
+                if isinstance(services, str):
+                    services = [services]
+                
+                for svc in services:
+                    if svc in NHI_PRINCIPALS:
+                        nhi_principals.add(svc)
 
-        role_type = "EC2" if "ec2.amazonaws.com" in principals else "Lambda"
+        # Use the collected NHI principals for the profile
+        principals = sorted(list(nhi_principals))
+        
+        # Determine the role type based on the first identified NHI principal
+        role_type = "Unknown"
+        if principals:
+            primary_principal = principals[0]
+            role_type = primary_principal.split('.')[0].upper()
 
         allowed = _get_allowed_actions(name)
         used = _query_used_actions(arn)
