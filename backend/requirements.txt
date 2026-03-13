@@ -5,6 +5,7 @@ supabase==2.11.0
 python-dotenv==1.0.1
 langchain==0.3.13
 langchain-community==0.3.13
+langchain-ollama==0.3.0
 pydantic==2.10.3
 httpx==0.28.1
 slowapi==0.1.9

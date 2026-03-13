@@ -10,7 +10,7 @@ import logging
 import re
 from typing import Any
 
-from langchain_community.llms import Ollama
+from langchain_ollama import OllamaLLM
 from langchain.prompts import ChatPromptTemplate
 
 from config import OLLAMA_BASE_URL
@@ -123,7 +123,7 @@ def generate_least_privilege_policy(
             actions.extend(act)
         current_policy = actions
 
-    llm = Ollama(
+    llm = OllamaLLM(
         model="llama3",
         base_url=OLLAMA_BASE_URL,
         temperature=0.1,   # low temp for deterministic policy output
