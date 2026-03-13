@@ -21,7 +21,7 @@ from pythonjsonlogger import jsonlogger
 
 from config import LOG_LEVEL, CORS_ORIGINS, API_KEY
 from database import get_all_identities, get_identity
-from scanner import get_nhi_profiles, quarantine_identity
+from scanner import get_nhi_profiles, quarantine_identity, _validate_role_arn
 from analyzer import generate_least_privilege_policy
 
 # ---------------------------------------------------------------------------
@@ -166,6 +166,8 @@ async def get_single_identity(arn: str, request: Request, _: None = Depends(veri
 @limiter.limit("10/minute")
 async def analyze_identity(req: AnalyzeRequest, request: Request, _: None = Depends(verify_api_key)):
     """Run AI analysis on an identity to generate a least-privilege policy."""
+    if not _validate_role_arn(req.arn):
+        raise HTTPException(status_code=400, detail="Invalid IAM role ARN format")
     identity = await asyncio.to_thread(get_identity, req.arn)
     if identity is None:
         raise HTTPException(status_code=404, detail="Identity not found")
