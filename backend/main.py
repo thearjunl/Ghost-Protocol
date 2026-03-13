@@ -20,7 +20,7 @@ from starlette.responses import JSONResponse
 from pythonjsonlogger import jsonlogger
 
 from config import LOG_LEVEL, CORS_ORIGINS, API_KEY
-from database import get_all_identities, get_identity
+from database import get_all_identities, get_identity, upsert_identity
 from scanner import get_nhi_profiles, quarantine_identity, _validate_role_arn
 from analyzer import generate_least_privilege_policy
 
@@ -178,6 +178,10 @@ async def analyze_identity(req: AnalyzeRequest, request: Request, _: None = Depe
             current_policy=identity.get("allowed_actions", {}),
             used_actions=identity.get("used_actions", []),
         )
+        # Fix: Save the newly computed risk score to the database
+        identity["risk_score"] = result.get("risk_score", 0)
+        await asyncio.to_thread(upsert_identity, identity)
+        
         return result
     except Exception as exc:
         logger.exception("Analysis failed for %s", req.arn)
