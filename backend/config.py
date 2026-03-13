@@ -1,6 +1,7 @@
 """GhostProtocol configuration loaded from environment variables."""
 
 import os
+import re
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -12,6 +13,13 @@ AWS_DEFAULT_REGION: str = os.getenv("AWS_DEFAULT_REGION", "us-east-1")
 
 ATHENA_DATABASE: str = os.getenv("ATHENA_DATABASE", "cloudtrail_logs")
 ATHENA_OUTPUT_BUCKET: str = os.getenv("ATHENA_OUTPUT_BUCKET", "")
+
+# Validate ATHENA_DATABASE to prevent SQL injection via environment variable
+if not re.match(r"^[a-zA-Z0-9_]+$", ATHENA_DATABASE):
+    raise ValueError(
+        f"ATHENA_DATABASE contains invalid characters: '{ATHENA_DATABASE}'. "
+        "Only alphanumeric characters and underscores are allowed."
+    )
 
 OLLAMA_BASE_URL: str = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 
