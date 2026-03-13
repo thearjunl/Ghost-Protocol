@@ -138,7 +138,7 @@ async def scan_identities(request: Request, _: None = Depends(verify_api_key)):
         return {"scanned": len(profiles), "profiles": profiles}
     except Exception as exc:
         logger.exception("Scan failed")
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(status_code=500, detail="An internal error occurred during the scan")
 
 
 @app.get("/identities")
@@ -149,7 +149,7 @@ async def list_identities(request: Request, _: None = Depends(verify_api_key)):
         return await asyncio.to_thread(get_all_identities)
     except Exception as exc:
         logger.exception("Failed to fetch identities")
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(status_code=500, detail="An internal error occurred while fetching identities")
 
 
 @app.get("/identities/{arn:path}")
@@ -185,7 +185,7 @@ async def analyze_identity(req: AnalyzeRequest, request: Request, _: None = Depe
         return result
     except Exception as exc:
         logger.exception("Analysis failed for %s", req.arn)
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(status_code=500, detail="An internal error occurred during analysis")
 
 
 @app.post("/quarantine")
@@ -197,5 +197,5 @@ async def quarantine(req: QuarantineRequest, request: Request, _: None = Depends
         return result
     except Exception as exc:
         logger.exception("Quarantine failed for %s", req.arn)
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(status_code=500, detail="An internal error occurred during quarantine")
 
