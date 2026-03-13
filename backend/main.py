@@ -4,6 +4,7 @@ Exposes REST endpoints consumed by the Next.js dashboard to scan,
 analyse, and quarantine Non-Human Identities in AWS.
 """
 
+import asyncio
 import logging
 import uuid
 from contextlib import asynccontextmanager
@@ -123,17 +124,17 @@ class AnalyzeRequest(BaseModel):
 # ---------------------------------------------------------------------------
 @app.get("/health")
 @limiter.limit("120/minute")
-def health(request: Request):
+async def health(request: Request):
     """Health-check endpoint."""
     return {"status": "ok"}
 
 
 @app.post("/scan")
 @limiter.limit("10/minute")
-def scan_identities(request: Request, _: None = Depends(verify_api_key)):
+async def scan_identities(request: Request, _: None = Depends(verify_api_key)):
     """Trigger an AWS scan and persist discovered NHI profiles to Supabase."""
     try:
-        profiles = get_nhi_profiles()
+        profiles = await asyncio.to_thread(get_nhi_profiles)
         return {"scanned": len(profiles), "profiles": profiles}
     except Exception as exc:
         logger.exception("Scan failed")
@@ -142,10 +143,10 @@ def scan_identities(request: Request, _: None = Depends(verify_api_key)):
 
 @app.get("/identities")
 @limiter.limit("60/minute")
-def list_identities(request: Request, _: None = Depends(verify_api_key)):
+async def list_identities(request: Request, _: None = Depends(verify_api_key)):
     """Return all audited identities from Supabase, ordered by risk."""
     try:
-        return get_all_identities()
+        return await asyncio.to_thread(get_all_identities)
     except Exception as exc:
         logger.exception("Failed to fetch identities")
         raise HTTPException(status_code=500, detail=str(exc))
@@ -153,9 +154,9 @@ def list_identities(request: Request, _: None = Depends(verify_api_key)):
 
 @app.get("/identities/{arn:path}")
 @limiter.limit("60/minute")
-def get_single_identity(arn: str, request: Request, _: None = Depends(verify_api_key)):
+async def get_single_identity(arn: str, request: Request, _: None = Depends(verify_api_key)):
     """Fetch a single identity by its ARN."""
-    identity = get_identity(arn)
+    identity = await asyncio.to_thread(get_identity, arn)
     if identity is None:
         raise HTTPException(status_code=404, detail="Identity not found")
     return identity
@@ -163,14 +164,15 @@ def get_single_identity(arn: str, request: Request, _: None = Depends(verify_api
 
 @app.post("/analyze")
 @limiter.limit("10/minute")
-def analyze_identity(req: AnalyzeRequest, request: Request, _: None = Depends(verify_api_key)):
+async def analyze_identity(req: AnalyzeRequest, request: Request, _: None = Depends(verify_api_key)):
     """Run AI analysis on an identity to generate a least-privilege policy."""
-    identity = get_identity(req.arn)
+    identity = await asyncio.to_thread(get_identity, req.arn)
     if identity is None:
         raise HTTPException(status_code=404, detail="Identity not found")
 
     try:
-        result = generate_least_privilege_policy(
+        result = await asyncio.to_thread(
+            generate_least_privilege_policy,
             current_policy=identity.get("allowed_actions", {}),
             used_actions=identity.get("used_actions", []),
         )
@@ -182,11 +184,12 @@ def analyze_identity(req: AnalyzeRequest, request: Request, _: None = Depends(ve
 
 @app.post("/quarantine")
 @limiter.limit("5/minute")
-def quarantine(req: QuarantineRequest, request: Request, _: None = Depends(verify_api_key)):
+async def quarantine(req: QuarantineRequest, request: Request, _: None = Depends(verify_api_key)):
     """Quarantine an identity by attaching a Deny-All permissions boundary."""
     try:
-        result = quarantine_identity(req.arn)
+        result = await asyncio.to_thread(quarantine_identity, req.arn)
         return result
     except Exception as exc:
         logger.exception("Quarantine failed for %s", req.arn)
         raise HTTPException(status_code=500, detail=str(exc))
+
