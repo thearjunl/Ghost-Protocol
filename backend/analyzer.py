@@ -11,9 +11,11 @@ import re
 from typing import Any
 
 from langchain_ollama import OllamaLLM
+from langchain_openai import ChatOpenAI
+from langchain_anthropic import ChatAnthropic
 from langchain.prompts import ChatPromptTemplate
 
-from config import OLLAMA_BASE_URL
+from config import OLLAMA_BASE_URL, LLM_PROVIDER, OPENAI_API_KEY, ANTHROPIC_API_KEY
 
 logger = logging.getLogger("ghostprotocol.analyzer")
 
@@ -123,11 +125,25 @@ def generate_least_privilege_policy(
             actions.extend(act)
         current_policy = actions
 
-    llm = OllamaLLM(
-        model="llama3",
-        base_url=OLLAMA_BASE_URL,
-        temperature=0.1,   # low temp for deterministic policy output
-    )
+    # Initialize LLM based on provider
+    if LLM_PROVIDER == "openai":
+        llm = ChatOpenAI(
+            model="gpt-4o",
+            api_key=OPENAI_API_KEY,
+            temperature=0.1,
+        )
+    elif LLM_PROVIDER == "anthropic":
+        llm = ChatAnthropic(
+            model="claude-3-5-sonnet-20241022",
+            api_key=ANTHROPIC_API_KEY,
+            temperature=0.1,
+        )
+    else:
+        llm = OllamaLLM(
+            model="llama3",
+            base_url=OLLAMA_BASE_URL,
+            temperature=0.1,
+        )
 
     prompt = ChatPromptTemplate.from_messages([
         ("system", SYSTEM_PROMPT),
@@ -137,7 +153,8 @@ def generate_least_privilege_policy(
     chain = prompt | llm
 
     logger.info(
-        "Invoking Ollama analysis — %d allowed actions, %d used actions",
+        "Invoking %s analysis — %d allowed actions, %d used actions",
+        LLM_PROVIDER,
         len(current_policy),
         len(used_actions),
     )

@@ -23,6 +23,12 @@ if not re.match(r"^[a-zA-Z0-9_]+$", ATHENA_DATABASE):
 
 OLLAMA_BASE_URL: str = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 
+# LLM Provider Configuration
+LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "ollama").lower()
+OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
+ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
+
+
 LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
 
 # Comma-separated allowed origins for CORS (defaults to localhost for dev)
