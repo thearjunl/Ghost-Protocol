@@ -17,7 +17,7 @@ Enterprises run thousands of IAM Roles that are consumed by services rather than
 
 --- 
 
-## Technical Stack
+## Technical Stack 
 
 | Layer | Technology |
 |-------|-----------|
