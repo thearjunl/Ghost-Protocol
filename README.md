@@ -15,7 +15,7 @@ Enterprises run thousands of IAM Roles that are consumed by services rather than
 3. **Generates** a least-privilege replacement policy using a local LLM (Ollama / Llama 3).
 4. **Quarantines** high-risk identities instantly with a non-destructive Deny-All permissions boundary.
 
---- 
+---  
 
 ## Technical Stack 
 
