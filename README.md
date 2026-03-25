@@ -3,7 +3,7 @@
 **An Autonomous Non-Human Identity (NHI) Auditor and Governance tool.** Uses Agentic AI (Ollama/Llama 3) to analyze AWS IAM & CloudTrail logs for real-time "Least Privilege" enforcement.
 
 GhostProtocol discovers, analyses, and enforces least-privilege policies on machine identities (IAM Roles used by EC2, Lambda, and other AWS services). It combines real-time AWS scanning with AI-powered policy recommendations to close the gap between *what a role can do* and *what it actually does*.
-
+ 
 --- 
 
 ## Problem Solved
