@@ -5,7 +5,7 @@
 GhostProtocol discovers, analyses, and enforces least-privilege policies on machine identities (IAM Roles used by EC2, Lambda, and other AWS services). It combines real-time AWS scanning with AI-powered policy recommendations to close the gap between *what a role can do* and *what it actually does*.
  
 --- 
- 
+  
 ## Problem Solved
 
 Enterprises run thousands of IAM Roles that are consumed by services rather than humans. These **Non-Human Identities** are frequently over-provisioned — they carry broad wildcard permissions despite using only a handful of API actions. GhostProtocol:
