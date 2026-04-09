@@ -1,26 +1,140 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=JetBrains+Mono:wght@700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --background: #0f1117;
-  --foreground: #e2e8f0;
+  /* Base colors - GitHub Dark inspired */
+  --base: #0D1117;
+  --surface: #161B22;
+  --surface-hover: #21262D;
+  --border: rgba(255, 255, 255, 0.07);
+  --border-highlight: rgba(255, 255, 255, 0.04);
+  
+  /* Semantic colors */
+  --primary: #00C9A7;
+  --primary-hover: #00B396;
+  --critical: #F85149;
+  --warning: #F0883E;
+  --success: #3FB950;
+  --info: #58A6FF;
+  
+  /* Text colors */
+  --text-primary: #E6EDF3;
+  --text-secondary: #8B949E;
+  --text-muted: #6E7681;
+  
+  /* Fonts */
+  --font-ui: 'Inter', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+  --font-stat: 'JetBrains Mono', monospace;
+}
+
+* {
+  box-sizing: border-box;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: "Inter", system-ui, sans-serif;
+  background: var(--base);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  letter-spacing: 0.05em;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* Custom scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 8px;
+  height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: #161921;
+  background: var(--base);
 }
 ::-webkit-scrollbar-thumb {
-  background: #282d3e;
-  border-radius: 3px;
+  background: var(--surface-hover);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #30363D;
+}
+
+/* Scan line animation */
+@keyframes scan-sweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.scan-sweep {
+  position: relative;
+  overflow: hidden;
+}
+
+.scan-sweep::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(0, 201, 167, 0.3), transparent);
+  transform: translateX(-100%);
+}
+
+.scan-sweep:hover::after {
+  animation: scan-sweep 1.5s ease-in-out infinite;
+}
+
+/* Pulse animation for live indicator */
+@keyframes pulse-dot {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.pulse-dot {
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+/* Card fade-in stagger */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in-stagger-1 {
+  animation: fade-in-up 0.4s ease-out 0ms forwards;
+  opacity: 0;
+}
+
+.fade-in-stagger-2 {
+  animation: fade-in-up 0.4s ease-out 80ms forwards;
+  opacity: 0;
+}
+
+.fade-in-stagger-3 {
+  animation: fade-in-up 0.4s ease-out 160ms forwards;
+  opacity: 0;
+}
+
+.fade-in-stagger-4 {
+  animation: fade-in-up 0.4s ease-out 240ms forwards;
+  opacity: 0;
 }
