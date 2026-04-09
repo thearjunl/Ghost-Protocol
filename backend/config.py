@@ -38,5 +38,18 @@ CORS_ORIGINS: list[str] = [
     if origin.strip()
 ]
 
-# Optional API key — set to a non-empty value to enable authentication
+# API key for authentication (REQUIRED in production)
 API_KEY: str = os.getenv("GHOSTPROTOCOL_API_KEY", "")
+
+# Validate API key is set in production
+if not API_KEY:
+    import sys
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    # Allow empty API key only in development mode
+    if os.getenv("ENVIRONMENT", "production").lower() == "production":
+        logger.error("GHOSTPROTOCOL_API_KEY must be set in production environment")
+        sys.exit(1)
+    else:
+        logger.warning("Running without API key authentication - DEVELOPMENT MODE ONLY")
