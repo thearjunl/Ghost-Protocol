@@ -23,6 +23,7 @@ from config import LOG_LEVEL, CORS_ORIGINS, API_KEY
 from database import get_all_identities, get_identity, upsert_identity
 from scanner import get_nhi_profiles, quarantine_identity, _validate_role_arn
 from analyzer import generate_least_privilege_policy
+from health import get_comprehensive_health
 
 # ---------------------------------------------------------------------------
 # Structured JSON Logging
@@ -125,8 +126,15 @@ class AnalyzeRequest(BaseModel):
 @app.get("/health")
 @limiter.limit("120/minute")
 async def health(request: Request):
-    """Health-check endpoint."""
+    """Basic health-check endpoint."""
     return {"status": "ok"}
+
+
+@app.get("/health/detailed")
+@limiter.limit("30/minute")
+async def health_detailed(request: Request, _: None = Depends(verify_api_key)):
+    """Comprehensive health check for all dependencies."""
+    return await asyncio.to_thread(get_comprehensive_health)
 
 
 @app.post("/scan")
