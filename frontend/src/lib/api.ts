@@ -1,5 +1,6 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-const API_KEY = process.env.NEXT_PUBLIC_API_KEY || "";
+import { API_URL, API_KEY } from "./env";
+
+const API_BASE = API_URL;
 
 export interface Identity {
   arn: string;
