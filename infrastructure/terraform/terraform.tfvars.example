@@ -1,0 +1,23 @@
+# AWS Configuration
+aws_region = "us-east-1"
+
+# Project Configuration
+project_name = "ghostprotocol"
+environment  = "prod"
+
+# S3 Bucket Names (must be globally unique)
+cloudtrail_bucket_name      = "ghostprotocol-cloudtrail-prod-REPLACE-WITH-UNIQUE-SUFFIX"
+athena_results_bucket_name  = "ghostprotocol-athena-results-prod-REPLACE-WITH-UNIQUE-SUFFIX"
+
+# CloudTrail Configuration
+enable_cloudtrail         = true
+cloudtrail_retention_days = 90
+
+# Tags
+tags = {
+  Project     = "GhostProtocol"
+  Environment = "Production"
+  ManagedBy   = "Terraform"
+  Purpose     = "NHI Security Auditing"
+  Owner       = "SecurityTeam"
+}
