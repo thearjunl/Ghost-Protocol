@@ -1,6 +1,11 @@
-import { API_URL, API_KEY } from "./env";
+/**
+ * GhostProtocol API Client
+ *
+ * All requests go through the Next.js API proxy (/api/proxy/...)
+ * which injects the API key server-side. No secrets in the browser.
+ */
 
-const API_BASE = API_URL;
+const API_BASE = "/api/proxy";
 
 export interface Identity {
   arn: string;
@@ -22,18 +27,9 @@ export interface AnalysisResult {
   summary: string;
 }
 
-function getHeaders(extra?: Record<string, string>): Record<string, string> {
-  const headers: Record<string, string> = { ...extra };
-  if (API_KEY) {
-    headers["X-API-Key"] = API_KEY;
-  }
-  return headers;
-}
-
 export async function fetchIdentities(): Promise<Identity[]> {
   const res = await fetch(`${API_BASE}/identities`, {
     cache: "no-store",
-    headers: getHeaders(),
   });
   if (!res.ok) throw new Error("Failed to fetch identities");
   return res.json();
@@ -42,7 +38,6 @@ export async function fetchIdentities(): Promise<Identity[]> {
 export async function triggerScan(): Promise<{ scanned: number }> {
   const res = await fetch(`${API_BASE}/scan`, {
     method: "POST",
-    headers: getHeaders(),
   });
   if (!res.ok) throw new Error("Scan failed");
   return res.json();
@@ -51,7 +46,7 @@ export async function triggerScan(): Promise<{ scanned: number }> {
 export async function analyzeIdentity(arn: string): Promise<AnalysisResult> {
   const res = await fetch(`${API_BASE}/analyze`, {
     method: "POST",
-    headers: getHeaders({ "Content-Type": "application/json" }),
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ arn }),
   });
   if (!res.ok) throw new Error("Analysis failed");
@@ -63,7 +58,7 @@ export async function quarantineIdentity(
 ): Promise<{ arn: string; quarantined: boolean }> {
   const res = await fetch(`${API_BASE}/quarantine`, {
     method: "POST",
-    headers: getHeaders({ "Content-Type": "application/json" }),
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ arn }),
   });
   if (!res.ok) throw new Error("Quarantine failed");
