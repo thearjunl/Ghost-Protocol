@@ -16,7 +16,7 @@ Enterprises run thousands of IAM Roles that are consumed by services rather than
 4. **Quarantines** high-risk identities instantly with a non-destructive Deny-All permissions boundary.
 
 ---  
-
+ 
 ## Technical Stack 
 
 | Layer | Technology |
