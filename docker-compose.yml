@@ -9,28 +9,58 @@ services:
       - "5432:5432"
     volumes:
       - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   # ── FastAPI Backend ───────────────────────────────────────────────────
   backend:
     build: ./backend
     restart: unless-stopped
-    ports:
-      - "8000:8000"
     env_file:
       - ./backend/.env
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+    # In production, backend is only reachable via the reverse proxy.
+    # Remove 'ports' and keep it internal-only behind nginx.
+    expose:
+      - "8000"
+    ports:
+      - "8000:8000"   # Remove this in production
 
   # ── Next.js Frontend ─────────────────────────────────────────────────
   frontend:
     build: ./frontend
     restart: unless-stopped
-    ports:
-      - "3000:3000"
     environment:
       NEXT_PUBLIC_API_URL: http://backend:8000
+      BACKEND_API_URL: http://backend:8000
     depends_on:
       - backend
+    # In production, frontend is only reachable via the reverse proxy.
+    expose:
+      - "3000"
+    ports:
+      - "3000:3000"   # Remove this in production
+
+  # ── Reverse Proxy (production TLS termination) ───────────────────────
+  # Uncomment for production deployments with HTTPS:
+  #
+  # nginx:
+  #   image: nginx:alpine
+  #   restart: unless-stopped
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+  #     - ./nginx/certs:/etc/nginx/certs:ro
+  #   depends_on:
+  #     - frontend
+  #     - backend
 
 volumes:
   pg_data:
