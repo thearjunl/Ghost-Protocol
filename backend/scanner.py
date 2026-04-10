@@ -171,7 +171,7 @@ def _query_used_actions(role_arn: str) -> list[str]:
     query = (
         f"SELECT DISTINCT eventsource || ':' || eventname AS action "
         f"FROM {ATHENA_DATABASE}.cloudtrail_logs "
-        f"WHERE useridentity.arn = '{role_arn}' "
+        f"WHERE useridentity.arn = ? "
         f"AND eventtime > date_add('day', -30, now()) "
         f"ORDER BY action"
     )
@@ -179,6 +179,7 @@ def _query_used_actions(role_arn: str) -> list[str]:
     try:
         execution = athena.start_query_execution(
             QueryString=query,
+            ExecutionParameters=[role_arn],
             ResultConfiguration={"OutputLocation": ATHENA_OUTPUT_BUCKET},
         )
         execution_id = execution["QueryExecutionId"]
